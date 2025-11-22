@@ -6,8 +6,8 @@ END TRY
 BEGIN CATCH
     PRINT 'Oops, division by zero happened!';
 	SELECT TOP 5 'Catch Select', * FROM [Order Details]; -- Semi-colon IS needed after this select statement, otherwise the THROW keyword will not work as SQL will silently IGNORE the THROW keyword.
-	THROW
-	PRINT 'If THROW was always effective, you would not see this message. Semi-colon or no, see?' -- This runs. Script continues.
+	THROW -- you don't always need to throw an error. Omit if you wish the script to continue and you can catch (handle the error)
+	PRINT 'If THROW was always effective, you would not see this message. Semi-colon must terminate SELECT statements in the catch block.' -- This runs. Script continues.
 END CATCH
 
 -- Example using: Northwind DB
