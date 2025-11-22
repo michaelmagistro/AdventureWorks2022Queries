@@ -30,3 +30,16 @@ where c.[ContactName] = 'Ana Trujillo'
 ROLLBACK
 SELECT 'Table Var', * FROM @NameChange
 SELECT 'Actual Table', * FROM Customers WHERE ContactName = 'Ana Trujillo'
+
+-- DELETE with OUTPUT and table variable
+DECLARE @DeletedRows TABLE (
+	OrderID INT,
+	ProductID INT
+)
+BEGIN TRAN
+DELETE [Order Details]
+OUTPUT DELETED.OrderID, DELETED.ProductID INTO @DeletedRows
+WHERE ProductID = 11
+ROLLBACK
+SELECT 'Table Var', * FROM @DeletedRows
+SELECT 'Actual Table', * FROM [Order Details] WHERE ProductID = 11
