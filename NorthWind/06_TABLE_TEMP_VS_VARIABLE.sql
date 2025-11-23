@@ -1,32 +1,46 @@
--- Table variables (@table) vs Temp tables (#table) – scope, stats, transactions
--- ROW_NUMBER, RANK, DENSE_RANK, NTILE
-SELECT 
-	CustomerID, 
-	OrderDate,
-	Freight,
-	ROW_NUMBER() OVER (PARTITION BY CustomerID ORDER BY OrderDate) AS Rn, -- this gives an incrementing count of orders BY CUSTOMER
-	-- Rank means how many people are ahead of me. if 10 people are tied for Rank 1, then they are all Rank 1 and the next person in line would be rank 11 (2-10 would be skipped as values due to the ties).
-	RANK() OVER (ORDER BY Freight DESC) AS Rank, -- no ORDER BY clause in the query, but SQL Server will very often return rows sorted by Freight DESC because the ranking calculation requires the rows to be pre-ordered – this visual sorting in the result set is a common (and confusing) side-effect, not a guarantee; always add ORDER BY in the main query if presentation order matters.
-	-- Dense Rank has to do with ties. it "compresses" the rank number so a number is never "missed", thus no gap is created. e.g. if the first tie occurs at 350 and two people are tied for that rank 350, the next dense rank is 351.
-	DENSE_RANK() OVER (ORDER BY Freight DESC) AS DenseRank
-FROM Orders
-ORDER BY Freight DESC
+USE Northwind
+GO -- Batch 1
+BEGIN TRY
+	DROP TABLE #MyTemp;
+END TRY
+BEGIN CATCH
+END CATCH
+-- Batch 1: Create and populate both tables
+DECLARE @MyTable TABLE (ID INT, Name VARCHAR(50)); -- Table variable: Batch-scoped
+CREATE TABLE #MyTemp (ID INT IDENTITY PRIMARY KEY, Name VARCHAR(50)); -- Temp table: Session-scoped
 
--- get a window into what the running freight total is for each customer
-SELECT CustomerID, 
-OrderDate,
-Freight,
-SUM(Freight) OVER (
-	PARTITION BY CustomerID
-	ORDER BY OrderDate
-	ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) --needed to handle items which have the same customer id and date, otherwise, only the first instance is added to the running total
-FROM Orders
-ORDER BY CustomerID, OrderDate DESC
+-- Insert sample data
+INSERT INTO @MyTable VALUES (1, 'Alice'), (2, 'Bob'); -- no need to specify columns if inserting a value for each column.
+INSERT INTO #MyTemp (Name) VALUES ('Alice'), ('Bob'); -- IDENTITY will auto-increment and does not need to be specified.
 
--- See a window into what the freight was two orders ago.
-SELECT CustomerID, 
-OrderDate,
-Freight,
-LAG(Freight, 2) OVER (PARTITION BY CustomerID ORDER BY OrderDate) as PrevOrder
-FROM Orders
-ORDER BY CustomerID, OrderDate DESC
+-- Query both (should work)
+SELECT 'Table Variable' AS TableType, * FROM @MyTable;
+SELECT 'Temp Table' AS TableType, * FROM #MyTemp;
+
+GO  -- End of Batch 1: @MyTable is destroyed here; comment out to see behavior
+
+-- Batch 2: Try to query again
+SELECT 'Table Variable' AS TableType, * FROM @MyTable; -- This will error as the variable is destroyed by keyword "GO"
+SELECT 'Temp Table' AS TableType, * FROM #MyTemp; -- This works
+
+-- Clean up temp table
+DROP TABLE #MyTemp;
+
+GO -- End of Batch 2: New example of rollback.
+
+-- Table variable – session scope, no stats, no transaction rollback, minimal logging
+DECLARE @T TABLE (ID int PRIMARY KEY, Val money);
+INSERT @T VALUES (1, 100), (2, 200);
+SELECT 'Select Initial @T', * FROM @T;
+
+-- Temp table – session or global (# vs ##), has statistics, participates in transactions
+CREATE TABLE #Temp (ID int PRIMARY KEY, Val money);
+INSERT #Temp VALUES (1, 100), (2, 200);
+
+BEGIN TRAN;
+DELETE #Temp; -- rolls back
+DELETE @T; -- does NOT roll back (@T variable get deleted even if this transaction is rolled back -- comment out to see behavior
+ROLLBACK;
+SELECT 'Select Post #Temp', * FROM #Temp;  -- still empty
+SELECT 'Select Post @T', * FROM @T;     -- still has rows
+DROP TABLE #Temp;
