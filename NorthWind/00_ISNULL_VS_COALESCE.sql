@@ -15,7 +15,7 @@ FROM Orders
 
 
 -- How ISNULL can cause issues with data types
--- ISNULL truncates 'Unknown Location' to fit VARCHAR(15) → 'Unknown Locati'
+-- ISNULL truncates 'Unknown Location' to fit VARCHAR(15) → 'Unknown Locati' because this fits the ShipRegion data type.
 SELECT ISNULL(ShipRegion, 'Unknown Location') AS BadISNULL
 FROM Orders 
 WHERE ShipRegion IS NULL;
