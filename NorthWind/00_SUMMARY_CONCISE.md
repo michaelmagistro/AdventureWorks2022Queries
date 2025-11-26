@@ -150,3 +150,42 @@ WITH OrgChart AS (
     FROM Employees e JOIN OrgChart oc ON e.ReportsTo = oc.EmployeeID
 )
 SELECT * FROM OrgChart OPTION (MAXRECURSION 100);
+```
+## Case Statement and IF THEN
+
+```sql
+-- case statement
+-- simplest example 1
+select case when 3<4 then 1 else 2 end
+-- simple example 2
+select case when 3<4 then 1
+when 'bob' <> 'sam' then 3
+else 2 end
+
+-- if statment example
+IF 3 < 4
+BEGIN
+	SELECT 1;
+END
+ELSE
+BEGIN
+	SELECT 2;
+END
+
+-- case statement with query in SELECT
+SELECT TOP 10 * FROM Customers
+SELECT 
+	CASE WHEN Country IN ('Germany','Mexico')
+	THEN 'Excluded Country' ELSE Country END
+FROM Customers
+
+SELECT * FROM Customers
+-- draft an update statement for the excluded countries (note the redundancy; where clause IS ALWAYS NEEDED)
+BEGIN TRAN
+UPDATE Customers
+SET Country = CASE WHEN Country IN ('Germany','Mexico')
+	THEN 'Excluded' ELSE Country END
+OUTPUT INSERTED.Country AS NewCountry
+WHERE Country IN ('Germany','Mexico')
+ROLLBACK
+```
